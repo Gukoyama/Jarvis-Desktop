@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS 3D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+   <div class="comandos">
+    <input
+        type="text"
+        id="comando"
+        placeholder="Digite: abrir hbo max"    >
+
+    <button id="executar">
+        Executar
+    </button>
+
+    <p id="resposta">
+        JARVIS DESATIVADO.
+    </p>
+
+    <button id="ativar">
+    Ativar Jarvis
+</button>
+
+<button id="desativar">
+    Desativar Jarvis
+</button>
+</div>
+  <script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module" src="script.js"></script></body>
+</html>
