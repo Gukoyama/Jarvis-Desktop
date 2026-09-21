@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("path");
+const os = require("os");
 
 function criarJanela() {
     const janela = new BrowserWindow({
@@ -32,6 +33,18 @@ ipcMain.handle("abrir-programa", async function(evento, programa) {
     return true;
 }
 
+if (programa === "modo-dev") {
+    await shell.openExternal(
+        "vscode://file/C:/Users/Gustavo/Documents/VSCODE/Jarvis-Desktop"
+    );
+
+    await shell.openExternal(
+        "https://github.com/Gukoyama/Jarvis-Desktop"
+    );
+
+    return true;
+}
+
     return false;
 });
 
@@ -51,6 +64,21 @@ app.whenReady().then(function() {
             criarJanela();
         }
     });
+});
+
+ipcMain.handle("status-sistema", function() {
+    const totalRam = os.totalmem();
+    const memoriaLivre = os.freemem();
+    const memoriaUsada = totalRam - memoriaLivre;
+
+    return {
+        sistema: os.platform(),
+        processador: os.cpus()[0].model,
+        nucleos: os.cpus().length,
+        ramTotal: (totalRam / 1073741824).toFixed(1),
+        ramUsada: (memoriaUsada / 1073741824).toFixed(1),
+        tempoLigado: Math.floor(os.uptime() / 3600)
+    };
 });
 
 app.on("window-all-closed", function() {

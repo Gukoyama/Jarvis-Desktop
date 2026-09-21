@@ -530,7 +530,9 @@ const botaoExecutar =
 const resposta =
     document.getElementById("resposta");
 
-function executarComando() {
+let cronometroFoco = null;
+
+async function executarComando() {
     const comando = campoComando.value
         .trim()
         .toLowerCase();
@@ -702,6 +704,127 @@ else if (comando === "abrir cmd") {
         "JARVIS ATIVADO. SISTEMA ONLINE.";
     }, 3000);
     
+}
+
+else if (
+    comando === "status do sistema" ||
+    comando === "status"
+) {
+    resposta.textContent = "ANALISANDO SISTEMA...";
+
+    if (window.jarvisPC) {
+        const dados =
+            await window.jarvisPC.obterStatus();
+
+        resposta.innerHTML = `
+           SISTEMA: ${ dados.sistema === "win32"
+        ? "WINDOWS"
+        : dados.sistema
+}<br>
+            PROCESSADOR: ${dados.processador}<br>
+            NÚCLEOS: 6<br>
+            THREADS: ${dados.nucleos}<br>
+            RAM: ${dados.ramUsada} GB /
+            ${dados.ramTotal} GB<br>
+            TEMPO LIGADO: ${dados.tempoLigado} HORAS<br>
+            INTERNET: ${
+                navigator.onLine
+                    ? "CONECTADA"
+                    : "DESCONECTADA"
+            }
+        `;
+    } else {
+        resposta.textContent =
+            "FUNCIONA SOMENTE NO APLICATIVO.";
+    }
+
+             /* setTimeout(function() {
+    resposta.textContent =
+        "JARVIS ATIVADO. SISTEMA ONLINE.";
+    }, 3000); */
+}
+
+    else if (
+    comando === "modo dev" ||
+    comando === "modo desenvolvedor"
+) {
+    resposta.textContent =
+        "INICIANDO MODO DESENVOLVEDOR...";
+
+    if (window.jarvisPC) {
+        await window.jarvisPC.abrirPrograma("modo-dev");
+
+        resposta.textContent =
+            "MODO DESENVOLVEDOR ATIVADO.";
+    } else {
+        resposta.textContent =
+            "FUNCIONA SOMENTE NO APLICATIVO.";
+    }
+}
+
+    else if (
+    comando === "ajuda" ||
+    comando === "comandos"
+) {
+    resposta.innerHTML = `
+        COMANDOS DO JARVIS:<br><br>
+
+        • hora<br>
+        • data<br>
+        • status<br>
+        • modo dev<br>
+        • abrir YouTube<br>
+        • abrir HBO Max<br>
+        • abrir Google<br>
+        • abrir Steam<br>
+        • abrir calculadora<br>
+        • abrir CMD
+    `;
+}
+
+    else if (comando.startsWith("focar ")) {
+    const minutos = Number(
+        comando.replace("focar ", "")
+    );
+
+    if (
+        !Number.isInteger(minutos) ||
+        minutos < 1 ||
+        minutos > 120
+    ) {
+        resposta.textContent =
+            "DIGITE: focar 1 até focar 120";
+        return;
+    }
+
+    clearInterval(cronometroFoco);
+
+    let segundos = minutos * 60;
+
+    function mostrarTempo() {
+        const min = Math.floor(segundos / 60);
+        const seg = segundos % 60;
+
+        resposta.textContent =
+            `MODO FOCO: ${min}:${String(seg).padStart(2, "0")}`;
+    }
+
+    mostrarTempo();
+
+    cronometroFoco = setInterval(function() {
+        segundos--;
+
+        if (segundos <= 0) {
+            clearInterval(cronometroFoco);
+            cronometroFoco = null;
+
+            resposta.textContent =
+                "TEMPO FINALIZADO! BOM TRABALHO.";
+            return;
+        }
+
+        mostrarTempo();
+    }, 1000);
 }
    
 else if (comando === "") {
