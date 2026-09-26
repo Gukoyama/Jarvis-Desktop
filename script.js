@@ -3,6 +3,12 @@ import * as THREE from "three";
 import { EffectComposer }
 from "three/addons/postprocessing/EffectComposer.js";
 
+import {
+    HandLandmarker,
+    FilesetResolver,
+    DrawingUtils
+} from "@mediapipe/tasks-vision";
+
 import { RenderPass }
 from "three/addons/postprocessing/RenderPass.js";
 
@@ -941,3 +947,224 @@ ondaEnergia.visible = false;
         resposta.textContent = "JARVIS DESATIVADO.";
     }, 600);
 });
+
+const videoCamera =
+    document.getElementById("camera");
+
+const statusCamera =
+    document.getElementById("status-camera");
+
+    const canvasMao =
+    document.getElementById("pontos-mao");
+
+const contextoMao =
+    canvasMao.getContext("2d");
+
+const desenhoMao =
+    new DrawingUtils(contextoMao);
+
+let ultimoTempoCamera = -1;
+
+let detectorMao = null;
+
+async function prepararDetectorMao() {
+    statusCamera.textContent =
+        "CARREGANDO DETECTOR DE MÃOS...";
+
+    const vision =
+        await FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm"
+        );
+
+    detectorMao =
+        await HandLandmarker.createFromOptions(
+            vision,
+            {
+                baseOptions: {
+                    modelAssetPath:
+                        "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+                    delegate: "CPU"
+                },
+
+                runningMode: "VIDEO",
+                numHands: 2,
+
+                minHandDetectionConfidence: 0.5,
+                minHandPresenceConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            }
+        );
+}
+
+    let aguardandoMaoAberta = false;
+    let tempoMaoFechada = 0;
+    let aguardandoMaoFechada = false;
+    let tempoMaoAberta = 0;
+    let bloquearGestosAte = 0;
+
+function verificarMaoAberta(pontos) {
+    return (
+        pontos[8].y < pontos[6].y &&
+        pontos[12].y < pontos[10].y &&
+        pontos[16].y < pontos[14].y &&
+        pontos[20].y < pontos[18].y
+    );
+}
+
+function verificarMaoFechada(pontos) {
+    return (
+        pontos[8].y > pontos[6].y &&
+        pontos[12].y > pontos[10].y &&
+        pontos[16].y > pontos[14].y &&
+        pontos[20].y > pontos[18].y
+    );
+}
+
+function detectarMaos() {
+    if (
+        detectorMao &&
+        videoCamera.readyState >= 2 &&
+        videoCamera.currentTime !== ultimoTempoCamera
+    ) {
+        ultimoTempoCamera = videoCamera.currentTime;
+
+        const resultado = detectorMao.detectForVideo(
+            videoCamera,
+            performance.now()
+        );
+
+        contextoMao.clearRect(
+            0,
+            0,
+            canvasMao.width,
+            canvasMao.height
+        );
+
+        for (const pontos of resultado.landmarks) {
+            desenhoMao.drawConnectors(
+                pontos,
+                HandLandmarker.HAND_CONNECTIONS,
+                {
+                    color: "#ff9d45",
+                    lineWidth: 4
+                }
+            );
+
+            desenhoMao.drawLandmarks(
+                pontos,
+                {
+                    color: "#ffffff",
+                    lineWidth: 2,
+                    radius: 4
+                }
+            );
+        }
+
+        if (resultado.landmarks.length > 0) {
+            const primeiraMao = resultado.landmarks[0];
+
+            if (!jarvisAtivo) {
+                if (verificarMaoFechada(primeiraMao)) {
+                    aguardandoMaoAberta = true;
+                    tempoMaoFechada = Date.now();
+
+                    statusCamera.textContent =
+                        "✊ ABRA A MÃO PARA ATIVAR";
+                }
+
+                const movimentoValido =
+                    aguardandoMaoAberta &&
+                    Date.now() - tempoMaoFechada < 3000 &&
+                    verificarMaoAberta(primeiraMao);
+
+                if (movimentoValido) {
+                    aguardandoMaoAberta = false;
+
+                    statusCamera.textContent =
+                        "🖐 ATIVANDO JARVIS...";
+
+                    botaoAtivar.click();
+                }
+
+                if (Date.now() - tempoMaoFechada >= 3000) {
+                    aguardandoMaoAberta = false;
+                }
+            } else {
+    if (verificarMaoAberta(primeiraMao)) {
+        aguardandoMaoFechada = true;
+        tempoMaoAberta = Date.now();
+
+        statusCamera.textContent =
+            "🖐 FECHE A MÃO PARA DESATIVAR";
+    }
+
+    const desativarValido =
+        aguardandoMaoFechada &&
+        Date.now() - tempoMaoAberta < 3000 &&
+        verificarMaoFechada(primeiraMao);
+
+    if (desativarValido) {
+        aguardandoMaoFechada = false;
+        bloquearGestosAte = Date.now() + 2000;
+
+        statusCamera.textContent =
+            "✊ DESATIVANDO JARVIS...";
+
+        botaoDesativar.click();
+    }
+
+    if (Date.now() - tempoMaoAberta >= 3000) {
+        aguardandoMaoFechada = false;
+    }
+}
+        } else {
+            statusCamera.textContent =
+                "CÂMERA ATIVA — MOSTRE A MÃO";
+        }
+    }
+
+    requestAnimationFrame(detectarMaos);
+}
+ 
+async function iniciarCamera() {
+    try {
+        statusCamera.textContent =
+            "INICIANDO CÂMERA...";
+
+        const cameraStream =
+            await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: 640,
+                    height: 480,
+                    facingMode: "user"
+                },
+                audio: false
+            });
+
+        videoCamera.srcObject = cameraStream;
+
+        statusCamera.textContent =
+            "CÂMERA ATIVA — LIBRAS";
+            detectarMaos();
+    } catch (erro) {
+        console.error(erro);
+
+        statusCamera.textContent =
+            "ERRO: PERMISSÃO DA CÂMERA";
+    }
+}
+
+async function iniciarSistemaLibras() {
+    try {
+        await prepararDetectorMao();
+        await iniciarCamera();
+    } catch (erro) {
+        console.error(erro);
+
+        statusCamera.textContent =
+            "ERRO AO CARREGAR DETECTOR";
+    }
+}
+
+iniciarSistemaLibras();
+

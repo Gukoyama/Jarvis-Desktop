@@ -20,5 +20,8 @@
       "target": "nsis",
       "icon": "icone.png"
     }
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1"
   }
 }
