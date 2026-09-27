@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import { reconhecerAbrir,
+         reconhecerYoutube
+
+ } from "./libras.js";
 
 import { EffectComposer }
 from "three/addons/postprocessing/EffectComposer.js";
@@ -14,6 +18,7 @@ from "three/addons/postprocessing/RenderPass.js";
 
 import { UnrealBloomPass }
 from "three/addons/postprocessing/UnrealBloomPass.js";
+
 
 const cena = new THREE.Scene();
 
@@ -1020,6 +1025,8 @@ function verificarMaoFechada(pontos) {
     );
 }
 
+    let aguardandoYoutube = false;
+    let tempoComandoAbrir = 0;
 function detectarMaos() {
     if (
         detectorMao &&
@@ -1059,6 +1066,45 @@ function detectarMaos() {
                 }
             );
         }
+
+       if (jarvisAtivo) {
+    if (
+        !aguardandoYoutube &&
+        reconhecerAbrir(resultado.landmarks)
+    ) {
+        aguardandoYoutube = true;
+        tempoComandoAbrir = Date.now();
+
+        resposta.textContent =
+            "ABRIR ✓ — FAÇA O SINAL YOUTUBE";
+    }
+
+    const dentroDoTempo =
+        Date.now() - tempoComandoAbrir < 8000;
+
+    if (
+        aguardandoYoutube &&
+        dentroDoTempo &&
+        reconhecerYoutube(resultado.landmarks)
+    ) {
+        aguardandoYoutube = false;
+
+        resposta.textContent =
+            "ABRINDO YOUTUBE...";
+
+        window.open(
+            "https://www.youtube.com/",
+            "_blank"
+        );
+    }
+
+    if (aguardandoYoutube && !dentroDoTempo) {
+        aguardandoYoutube = false;
+
+        resposta.textContent =
+            "TEMPO ESGOTADO. FAÇA ABRIR NOVAMENTE.";
+    }
+}
 
         if (resultado.landmarks.length > 0) {
             const primeiraMao = resultado.landmarks[0];
@@ -1110,8 +1156,10 @@ function detectarMaos() {
         statusCamera.textContent =
             "✊ DESATIVANDO JARVIS...";
 
-        botaoDesativar.click();
-    }
+if (!aguardandoYoutube) {
+    botaoDesativar.click();
+}  
+  }
 
     if (Date.now() - tempoMaoAberta >= 3000) {
         aguardandoMaoFechada = false;
